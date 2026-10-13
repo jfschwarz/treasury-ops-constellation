@@ -1,6 +1,7 @@
 import { custom, swap } from "@zodiaceco/sdk/actions";
 import { arb1 } from "../../defikit";
 import { TREASURY_ASSETS } from "../../tokens";
+import gmx from "./gmx";
 
 // Everything here keeps funds inside the vault: DeFi Kit presets and CoW
 // orders pin every receiver / onBehalfOf to the vault itself, so a curator
@@ -46,4 +47,6 @@ export default [
     tokens: ["WETH", "USDC", "WBTC"],
     fees: ["0.05%", "0.3%"],
   }),
+
+  ...gmx,
 ] satisfies Permissions;
