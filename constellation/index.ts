@@ -1,30 +1,36 @@
-import { backend_operator } from "./roles";
-import { usdm_user_payouts } from "./allowances";
+import { curator } from "./roles";
+import { CURATORS, VAULT_OWNERS } from "./team";
 
-const mega = constellation({
+const arb = constellation({
   workspace: "Default workspace",
-  label: "Backend Operator",
-  chain: 4326, // megaeth
+  label: "Client vaults",
+  chain: 42161, // arbitrum
 });
 
-const backendSafe = mega.safe["Backend Safe"]({
+// One Safe per client, each with its own Roles mod carrying the curator
+// policy. To add a client, copy this block with a new label and nonce, pick
+// the curators that run it, and export both nodes.
+
+// Client 1 — run by the whole curator team with equal privileges.
+const client1Vault = arb.safe["Client 1 Vault"]({
   nonce: 0n,
+  vault: true,
   threshold: 2,
-  owners: [
-    "0xcAF075b4102d96CdF9Bc5A2cEDb170a8b69697E8",
-    "0x33D06d961f988017910c5F2bb64C33356f02CC4f",
-    "0xD84681429FB6aB3D6BA887Adf82D462b43b7850a",
-  ],
-  modules: [mega.roles["Backend Operator"]],
+  owners: [...VAULT_OWNERS],
+  modules: [arb.roles["Client 1 Roles"]],
 });
 
-const backendRoles = mega.roles["Backend Operator"]({
+const client1Roles = arb.roles["Client 1 Roles"]({
   nonce: 0n,
-  target: "0x45C1fF5B82338C5085c22745f7D18d559511B436",
-  owner: "0x45C1fF5B82338C5085c22745f7D18d559511B436",
-  avatar: "0x45C1fF5B82338C5085c22745f7D18d559511B436",
-  roles: { backend_operator },
-  allowances: { usdm_user_payouts },
+  target: client1Vault,
+  owner: client1Vault,
+  avatar: client1Vault,
+  roles: {
+    curator: { ...curator, members: [CURATORS.jan_felix, CURATORS.julia] },
+  },
 });
 
-export { backendSafe, backendRoles };
+// A future client run by a dedicated specialist would look the same, with
+// `members: [CURATORS.<specialist>]`.
+
+export { client1Vault, client1Roles };
