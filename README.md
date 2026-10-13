@@ -53,10 +53,14 @@ specific markets, and those expire and need replacing every epoch. Options:
   on another chain.
 
 **GMX.** DeFi Kit has no GMX preset, so `gmx.ts` is written by hand. It allows
-only the exact `multicall` shapes the GMX app sends, because GMX credits a
-request with whatever tokens sit in its vault contract. The permissions pass
-the Roles SDK's integrity checks but haven't been fork-tested yet. Before
-relying on them, try a small deposit and withdrawal through Pilot. Also:
+only whole `multicall`s (send tokens, then create the request), because GMX
+credits a request with whatever tokens sit in its vault contract. Unlike the
+GMX app, the execution fee is paid in WETH rather than ETH: ETH sent along
+with a call could be left behind in the router for anyone to take. So curators
+wrap ETH first, and the GMX app's own transactions won't pass. They have to
+be built in this shape, by Pilot or a script. The permissions pass the Roles
+SDK's integrity checks but haven't been fork-tested yet. Before relying on
+them, try a small deposit and withdrawal. Also:
 
 - GMX redeploys its routers on upgrades. When that happens, update
   `zodiac.config.ts` and redeploy the policy.

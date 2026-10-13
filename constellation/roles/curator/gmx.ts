@@ -8,9 +8,16 @@ import { USDC, WBTC, WETH } from "../../tokens";
 // a GMX vault contract, then creates a request that a keeper executes later.
 // The vault credits a request with whatever balance it received since the last
 // one, so a token sent on its own would be claimable by the next caller. Each
-// permission therefore only allows the whole `multicall` the GMX app sends —
-// `sendWnt` (execution fee), `sendTokens`, `create…` — with every token sent
-// being one the request names, and the receiver pinned to the vault.
+// permission therefore only allows a whole `multicall` — `sendTokens` for the
+// execution fee and the tokens, then `create…` — with every token sent being
+// one the request names, and the receiver pinned to the vault.
+//
+// The GMX app pays the execution fee with `sendWnt`, which wraps ETH sent
+// along with the call. `sendWnt` wraps from the router's own balance, though,
+// not from the call's value, so ETH sent in excess would stay in the router
+// for anyone to take. The vaults count WETH however it arrives, so the fee is
+// paid in WETH through `sendTokens` instead, and no ETH can be sent at all.
+// Curators wrap ETH first.
 
 const SYNTHETICS_ROUTER: `0x${string}` =
   "0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6"; // pulls approved tokens
@@ -71,8 +78,9 @@ const requestAddresses = {
 };
 
 /**
- * The deposit shapes for one pool: either or both of its tokens sent with
- * `sendTokens`, or — for a WETH pool — native ETH riding along in `sendWnt`.
+ * The deposit shapes for one pool: the WETH execution fee, then either or both
+ * of the pool's tokens. A WETH pool's long side may also ride along with the
+ * fee in a single transfer; GMX takes the fee off the WETH it received.
  */
 const depositShapes = (
   router: typeof exchange | typeof glvRouter,
@@ -80,8 +88,8 @@ const depositShapes = (
   pool: Pool,
   create: ReturnType<typeof call>,
 ) => {
-  const fee = call(router.sendWnt(vault));
   const send = (token: `0x${string}`) => call(router.sendTokens(token, vault));
+  const fee = send(WETH);
   const shapes = [
     c.matches([fee, send(pool.long), create]),
     c.matches([fee, send(pool.short), create]),
@@ -110,7 +118,7 @@ const gmDeposit = (pool: Pool) =>
 
 const gmWithdrawal = (pool: Pool) =>
   c.matches([
-    call(exchange.sendWnt(WITHDRAWAL_VAULT)),
+    call(exchange.sendTokens(WETH, WITHDRAWAL_VAULT)), // execution fee
     call(exchange.sendTokens(pool.market, WITHDRAWAL_VAULT)), // the GM token is the market
     call(
       exchange.createWithdrawal({
@@ -140,7 +148,7 @@ const glvDeposit = ({ glv, via }: (typeof GLVS)[number]) =>
 
 const glvWithdrawal = ({ glv, via }: (typeof GLVS)[number]) =>
   c.matches([
-    call(glvRouter.sendWnt(GLV_VAULT)),
+    call(glvRouter.sendTokens(WETH, GLV_VAULT)), // execution fee
     call(glvRouter.sendTokens(glv, GLV_VAULT)),
     call(
       glvRouter.createGlvWithdrawal({
@@ -169,8 +177,8 @@ export default [
       ...POOLS.map((p) => approveRouter(p.market)),
       ...GLVS.map((g) => approveRouter(g.glv)),
 
-      exchange.multicall(oneOf(gmShapes), { send: true }),
-      glvRouter.multicall(oneOf(glvShapes), { send: true }),
+      exchange.multicall(oneOf(gmShapes)),
+      glvRouter.multicall(oneOf(glvShapes)),
 
       // Pending requests can only be cancelled by their own account, and
       // refund to it.
