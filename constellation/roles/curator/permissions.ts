@@ -1,6 +1,6 @@
-import { custom, swap } from "@zodiaceco/sdk/actions";
+import { swap } from "@zodiaceco/sdk/actions";
 import { arb1 } from "../../defikit";
-import { TREASURY_ASSETS } from "../../tokens";
+import { ETH, TREASURY_ASSETS, WETH } from "../../tokens";
 import gmx from "./gmx";
 
 // Everything here keeps funds inside the vault: DeFi Kit presets and CoW
@@ -14,12 +14,11 @@ export default [
     buy: [...TREASURY_ASSETS],
   }),
 
-  custom({
+  // A swap between ETH and WETH only compiles to WETH deposit / withdraw.
+  swap({
     label: "Wrap and unwrap ETH",
-    permissions: [
-      allow.arb1.weth.deposit({ send: true }),
-      allow.arb1.weth.withdraw(),
-    ],
+    sell: [ETH, WETH],
+    buy: [ETH, WETH],
   }),
 
   // Lend

@@ -1,6 +1,99 @@
-# Zodiac Constellation Template
+# Treasury Ops Constellation
 
-A starter project for managing your organisation's onchain accounts, roles, and permissions as code.
+DeFi treasury operations on behalf of our investors: one Safe vault per client on
+Arbitrum, run by curators who can swap, lend, provide liquidity and rebalance,
+but never move funds into or out of a vault.
+
+This is an initial test setup and a basis for discussion. See
+[Open questions](#open-questions).
+
+## What it sets up
+
+On Arbitrum One (`constellation/index.ts`):
+
+- **Client 1 Vault**: a Safe, marked as a workspace vault. For the test it's
+  owned 1-of-1 by Jan's personal Safe.
+- **Client 1 Roles**: a Roles mod on the vault, owned by the vault itself.
+- **Treasury Curator policy** (`constellation/roles/curator/`): one role key
+  shared by every vault's Roles mod, so it's a single policy in Zodiac with
+  members set per vault. A vault can be run by the whole curator team with
+  equal privileges, or by a dedicated specialist. To add a client, copy the
+  Client 1 block with a new label and nonce.
+
+Assets: ETH, WETH, USDC (native), WBTC and XAUt0 (`constellation/tokens.ts`).
+
+## What curators can do
+
+Every receiver is pinned to the vault, so funds can only move between the
+vault's own positions.
+
+| Protocol   | Allowed                                                                     | Built with                                                 |
+| ---------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| CoW Swap   | Swap between all treasury assets                                            | SDK `swap`                                                 |
+| WETH       | Wrap and unwrap ETH                                                         | SDK `swap` (an ETH↔WETH swap compiles to deposit/withdraw) |
+| Aave v3    | Supply ETH, WETH, USDC, WBTC                                                | DeFi Kit                                                   |
+| Morpho     | Deposit into Steakhouse High Yield USDC and Gauntlet USDC Core              | DeFi Kit                                                   |
+| Fluid      | Supply ETH, WETH, USDC                                                      | DeFi Kit                                                   |
+| Uniswap v3 | Provide WETH/USDC/WBTC liquidity in the 0.05% and 0.3% pools                | DeFi Kit                                                   |
+| GMX v2     | Deposit into and withdraw from GM ETH/USD and BTC/USD and the matching GLVs | Hand-written (`constellation/roles/curator/gmx.ts`)        |
+
+`constellation/defikit.ts` types the SDK's `defikit` entries against DeFi Kit's
+Arbitrum kit, so Arbitrum-only tokens, vaults and parameters type-check.
+
+## Open questions
+
+**Pendle.** Pendle's only active markets on Arbitrum are USDai and sUSDai, none
+of which match our assets, so Pendle is left out. DeFi Kit has no Pendle
+preset either. Covering it would mean hand-written router permissions scoped to
+specific markets, and those expire and need replacing every epoch. Options:
+
+- Skip Pendle for now (current state).
+- Accept USDai / sUSDai exposure on Arbitrum.
+- Run Pendle positions on Ethereum, which would mean a second vault per client
+  on another chain.
+
+**GMX.** DeFi Kit has no GMX preset, so `gmx.ts` is written by hand. It allows
+only the exact `multicall` shapes the GMX app sends, because GMX credits a
+request with whatever tokens sit in its vault contract. The permissions pass
+the Roles SDK's integrity checks but haven't been fork-tested yet. Before
+relying on them, try a small deposit and withdrawal through Pilot. Also:
+
+- GMX redeploys its routers on upgrades. When that happens, update
+  `zodiac.config.ts` and redeploy the policy.
+- Which pools do we want? GMX's XAUT and GOLD markets are excluded because
+  they're synthetic and backed by ETH/BTC/USDC, so LPing them gives no gold
+  exposure.
+
+**Gold.** XAUt0 was picked over PAXG because it has far more supply on
+Arbitrum (about 130.7 vs 15.7 tokens). Neither Aave nor Fluid lists gold on
+Arbitrum, so gold can only be swapped, not lent. Is that enough?
+
+**Morpho.** On Arbitrum only the USDC vaults hold meaningful deposits (about
+$2.4M and $0.5M for the two chosen), and there are no WETH or WBTC vaults worth
+using. Which curators' vaults do we trust?
+
+**Borrowing.** Curators can supply but not borrow. DeFi Kit offers Aave and
+Morpho borrow presets if we want leverage or looping strategies.
+
+**Uniswap.** DeFi Kit covers liquidity positions only. Direct swaps go through
+CoW, which routes through Uniswap liquidity anyway. Is LPing on Uniswap wanted
+at all, given the active management it needs?
+
+**Spending limits.** There are no allowances (per-period caps) yet. With only
+1–3 operations per vault per month, caps on swap volume could be a cheap
+guardrail.
+
+**Vault ownership.** Owners can do anything, including withdrawing. Who owns a
+production vault (the client, our signers, or both), and at what threshold?
+
+**Curators.** Jan is the only curator so far. Julia joins once she has a
+personal Safe in Zodiac (then run `bun pull-org`). How do we assign dedicated
+specialists to future clients?
+
+---
+
+The rest of this README is the constellation template's guide to working with
+this repository.
 
 ## What's a Zodiac constellation?
 
@@ -83,10 +176,7 @@ export const tweaked = eth.safe["GG Treasury"]({ threshold: 4 });
 export const backendSafe = eth.safe["Backend Safe"]({
   nonce: 0n,
   threshold: 2,
-  owners: [
-    "0xcAF075b4102d96CdF9Bc5A2cEDb170a8b69697E8",
-    eth.user["alice"],
-  ],
+  owners: ["0xcAF075b4102d96CdF9Bc5A2cEDb170a8b69697E8", eth.user["alice"]],
   modules: [eth.roles["Backend Operator"]],
 });
 ```
