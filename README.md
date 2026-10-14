@@ -27,14 +27,14 @@ Assets: ETH, WETH, USDC (native), WBTC and XAUt0 (`constellation/tokens.ts`).
 Every receiver is pinned to the vault, so funds can only move between the
 vault's own positions.
 
-| Protocol   | Allowed                                                        | Built with                                                 |
-| ---------- | -------------------------------------------------------------- | ---------------------------------------------------------- |
-| CoW Swap   | Swap between all treasury assets                               | SDK `swap`                                                 |
-| WETH       | Wrap and unwrap ETH                                            | SDK `swap` (an ETH↔WETH swap compiles to deposit/withdraw) |
-| Aave v3    | Supply ETH, WETH, USDC, WBTC                                   | DeFi Kit                                                   |
-| Morpho     | Deposit into Steakhouse High Yield USDC and Gauntlet USDC Core | DeFi Kit                                                   |
-| Fluid      | Supply ETH, WETH, USDC                                         | DeFi Kit                                                   |
-| Uniswap v3 | Provide WETH/USDC/WBTC liquidity in the 0.05% and 0.3% pools   | DeFi Kit                                                   |
+| Protocol   | Allowed                                                                                   | Built with                                                 |
+| ---------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| CoW Swap   | Swap between all treasury assets                                                          | SDK `swap`                                                 |
+| WETH       | Wrap and unwrap ETH                                                                       | SDK `swap` (an ETH↔WETH swap compiles to deposit/withdraw) |
+| Aave v3    | Supply ETH, WETH, USDC, WBTC                                                              | DeFi Kit                                                   |
+| Morpho     | Deposit into and withdraw from Bitget x Steakhouse USDC, directly or the Morpho app's way | `morphoVaults` (`constellation/morpho.ts`)                 |
+| Fluid      | Supply ETH, WETH, USDC                                                                    | DeFi Kit                                                   |
+| Uniswap v3 | Provide WETH/USDC/WBTC liquidity in the 0.05% and 0.3% pools                              | DeFi Kit                                                   |
 
 `constellation/defikit.ts` types the SDK's `defikit` entries against DeFi Kit's
 Arbitrum kit, so Arbitrum-only tokens, vaults and parameters type-check.
@@ -74,9 +74,11 @@ Options:
 Arbitrum (about 130.7 vs 15.7 tokens). Neither Aave nor Fluid lists gold on
 Arbitrum, so gold can only be swapped, not lent. Is that enough?
 
-**Morpho.** On Arbitrum only the USDC vaults hold meaningful deposits (about
-$2.4M and $0.5M for the two chosen), and there are no WETH or WBTC vaults worth
-using. Which curators' vaults do we trust?
+**Morpho.** For now only Bitget x Steakhouse USDC (a Vault V2, about $1.56M).
+DeFi Kit's Morpho preset only allows the direct ERC-4626 calls, but the Morpho
+app goes through VaultBundlesV1, so `constellation/morpho.ts` allows both.
+VaultBundlesV1 only ever pays out to the caller; the referral fee it can split
+off to any address is pinned to zero. Do we want more vaults?
 
 **Borrowing.** Curators can supply but not borrow. DeFi Kit offers Aave and
 Morpho borrow presets if we want leverage or looping strategies.

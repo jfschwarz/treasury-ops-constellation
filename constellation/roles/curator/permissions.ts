@@ -1,5 +1,6 @@
 import { swap } from "@zodiaceco/sdk/actions";
 import { arb1 } from "../../defikit";
+import { morphoVaults } from "../../morpho";
 import { ETH, TREASURY_ASSETS, WETH } from "../../tokens";
 
 // Everything here keeps funds inside the vault: DeFi Kit presets and CoW
@@ -26,11 +27,14 @@ export default [
     targets: ["ETH", "WETH", "USDC", "WBTC"],
   }),
 
-  arb1.morphoVaults.deposit({
-    label: "Deposit USDC into Morpho vaults",
-    targets: [
-      "0x5c0C306Aaa9F877de636f4d5822cA9F2E81563BA", // Steakhouse High Yield USDC
-      "0x7e97fa6893871A2751B5fE961978DCCb2c201E65", // Gauntlet USDC Core
+  morphoVaults({
+    label: "Deposit USDC into Morpho",
+    asset: allow.arb1.usdc,
+    vaults: [
+      {
+        address: "0xbeeff1D5dE8F79ff37a151681100B039661da518", // Bitget x Steakhouse USDC (Vault V2)
+        kit: allow.arb1.morpho.bitget_steakhouse_usdc,
+      },
     ],
   }),
 
