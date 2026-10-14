@@ -9,18 +9,41 @@ This is an initial test setup and a basis for discussion. See
 
 ## What it sets up
 
-On Arbitrum One (`constellation/index.ts`):
+On Arbitrum One (`constellation/index.ts`), per client:
 
-- **Client 1 Vault**: a Safe, marked as a workspace vault. For the test it's
-  owned 1-of-1 by Jan's personal Safe.
-- **Client 1 Roles**: a Roles mod on the vault, owned by the vault itself.
-- **Treasury Curator policy** (`constellation/roles/curator/`): one role key
-  shared by every vault's Roles mod, so it's a single policy in Zodiac with
-  members set per vault. A vault can be run by the whole curator team with
-  equal privileges, or by a dedicated specialist. To add a client, copy the
-  Client 1 block with a new label and nonce.
+- **Client N Vault**: a Safe, marked as a workspace vault. Owned 2-of-2 by a
+  curator (Jan's personal Safe) and the client's own signer, so neither can
+  move funds or change the setup alone.
+- **Client N Roles**: a Roles mod on the vault, owned by the vault itself.
+
+There are two clients, both run by the whole curator team. The **Treasury
+Curator policy** (`constellation/roles/curator/`) is one role key shared by
+every vault's Roles mod, so it's a single policy in Zodiac with members set per
+vault. A vault can be run by the whole team with equal privileges, or by a
+dedicated specialist. To add a client, copy a client block with a new label and
+nonce.
 
 Assets: ETH, WETH, USDC (native), WBTC and XAUt0 (`constellation/tokens.ts`).
+
+## Current state
+
+| Node           | On chain                               | In this repo                                                   |
+| -------------- | -------------------------------------- | -------------------------------------------------------------- |
+| Client 1 Vault | `0x22a2…6839`, owned 1-of-1 by Jan     | 2-of-2: Jan and a placeholder client signer (not pushed)       |
+| Client 1 Roles | `0x6b18…cd4b`, the vault's only module | Curator policy with the Bitget x Steakhouse Morpho permissions |
+| Client 2 Vault | Not deployed                           | 2-of-2: Jan and a placeholder client signer                    |
+| Client 2 Roles | Not deployed                           | Same curator policy and members as Client 1                    |
+
+- The revision with the new Morpho permissions and the pinned Client 1 Roles
+  was pushed to Zodiac. After it is deployed, test a small Morpho deposit and
+  withdrawal.
+- The client signers (`CLIENT_SIGNERS` in `constellation/index.ts`) are dummy
+  addresses nobody holds a key for. **Don't push this revision until they are
+  real.** A 2-of-2 with one dead owner can never change its owners, modules or
+  threshold again, and Client 1 would be locked that way on its first
+  deployment.
+- An earlier deployment left an unused Roles mod at `0xc1e5…59eb`, owned by
+  Jan's personal Safe and enabled nowhere. It can be ignored.
 
 ## What curators can do
 
@@ -91,13 +114,24 @@ at all, given the active management it needs?
 1–3 operations per vault per month, caps on swap volume could be a cheap
 guardrail.
 
-**Vault ownership.** Owners can do anything, including withdrawing. Who owns a
-production vault (the client, our signers, or both), and at what threshold?
+**Vault ownership.** Owners can do anything, including withdrawing, so each
+vault is 2-of-2: one curator plus the client. Open points:
 
-**Curators.** Jan and Johannes are the curators so far. Johannes's personal
-Safe isn't activated yet, so he can't act until it is. Julia joins once she
-has a personal Safe in Zodiac (then run `bun pull-org`). How do we assign dedicated
-specialists to future clients?
+- The clients' real signer addresses (placeholders for now, see
+  [Current state](#current-state)).
+- Jan is the curator signer on both vaults. Johannes can't sign yet (see
+  below). Should it be any one curator, so 2-of-3 or more with the client
+  required, rather than one named person?
+- Does the client need to co-sign every owner action, or should our side be
+  able to recover the vault (for example add a replacement Roles mod) without
+  them?
+
+**Curators.** Jan and Johannes are the curators of both vaults. Johannes's
+personal Safe isn't deployed yet, so he can't act until it is. He can activate
+it under Profile → Personal Safes; once zodiac-os PR #5574 is live, a
+constellation deployment brings it along automatically. Julia joins once she
+has a personal Safe in Zodiac (then run `bun pull-org`). How do we assign
+dedicated specialists to future clients?
 
 ---
 

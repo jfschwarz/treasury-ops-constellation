@@ -13,20 +13,28 @@ const CURATORS = {
   johannes: arb.user["Johannes Moormann"],
 };
 
+// Each client's own signer. PLACEHOLDERS: nobody holds a key for these, and
+// with a 2-of-2 the vault can't change its owners or modules until the real
+// address is in place. Replace them before deploying.
+const CLIENT_SIGNERS = {
+  client1: "0x00000000000000000000000000000000000c1e01",
+  client2: "0x00000000000000000000000000000000000c1e02",
+} as const;
+
 // One Safe per client, each with its own Roles mod carrying the curator
-// policy. To add a client, copy this block with a new label and nonce, pick
-// the curators that run it, and export both nodes.
+// policy. To add a client, copy a block with a new label and nonce, pick its
+// owners and the curators that run it, and export both nodes.
+//
+// Owners can do anything, including moving funds in and out, so they sign
+// together: one curator and the client, 2 of 2. The curators' day-to-day work
+// goes through the Roles mod and needs neither.
 
 // Client 1 — run by the whole curator team with equal privileges.
 const client1Vault = arb.safe["Client 1 Vault"]({
   nonce: 0n,
   vault: true,
-  // Owners can do anything, including moving funds in and out, so ownership
-  // stays separate from the curators' day-to-day role. For this test setup
-  // it's Jan alone; a production vault would add the client and/or the firm's
-  // other signers and raise the threshold.
-  threshold: 1,
-  owners: [arb.user["Jan-Felix Schwarz"]],
+  threshold: 2,
+  owners: [CURATORS.jan_felix, CLIENT_SIGNERS.client1],
   modules: [arb.roles["Client 1 Roles"]],
 });
 
@@ -42,7 +50,24 @@ const client1Roles = arb.roles["Client 1 Roles"]({
   },
 });
 
-// A client run by a dedicated specialist looks the same, with
-// `members: [CURATORS.<specialist>]`.
+// Client 2 — the same policy and curator team. A client run by a dedicated
+// specialist would use `members: [CURATORS.<specialist>]` instead.
+const client2Vault = arb.safe["Client 2 Vault"]({
+  nonce: 1n,
+  vault: true,
+  threshold: 2,
+  owners: [CURATORS.jan_felix, CLIENT_SIGNERS.client2],
+  modules: [arb.roles["Client 2 Roles"]],
+});
 
-export { client1Vault, client1Roles };
+const client2Roles = arb.roles["Client 2 Roles"]({
+  nonce: 0n,
+  target: client2Vault,
+  owner: client2Vault,
+  avatar: client2Vault,
+  roles: {
+    curator: { ...curator, members: Object.values(CURATORS) },
+  },
+});
+
+export { client1Vault, client1Roles, client2Vault, client2Roles };
