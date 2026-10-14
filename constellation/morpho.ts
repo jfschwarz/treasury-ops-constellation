@@ -1,8 +1,7 @@
 import { custom } from "@zodiaceco/sdk/actions";
 
-// Morpho vaults on Arbitrum. DeFi Kit's Morpho preset only knows the direct
-// ERC-4626 calls, while the Morpho app deposits and withdraws through
-// VaultBundlesV1. This covers both.
+// Morpho vaults on Arbitrum, used either directly (the vault's own ERC-4626
+// calls) or the way the Morpho app does it, through VaultBundlesV1.
 //
 // VaultBundlesV1 (verified source on Sourcify) only ever pulls from, deposits
 // for, redeems from and pays out to `msg.sender` — here the vault Safe — so

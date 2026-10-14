@@ -3,9 +3,9 @@ import { arb1 } from "../../defikit";
 import { morphoVaults } from "../../morpho";
 import { ETH, TREASURY_ASSETS, WETH } from "../../tokens";
 
-// Everything here keeps funds inside the vault: DeFi Kit presets and CoW
-// orders pin every receiver / onBehalfOf to the vault itself, so a curator
-// can rebalance between positions but never withdraw to an outside address.
+// Everything here keeps funds inside the vault: every receiver / onBehalfOf
+// is pinned to the vault itself, so a curator can rebalance between positions
+// but never withdraw to an outside address.
 export default [
   // Swap & rebalance
   swap({
