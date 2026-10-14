@@ -18,6 +18,10 @@ import { USDC, WBTC, WETH } from "../../tokens";
 // for anyone to take. The vaults count WETH however it arrives, so the fee is
 // paid in WETH through `sendTokens` instead, and no ETH can be sent at all.
 // Curators wrap ETH first.
+//
+// The Roles mod takes at most 256 condition nodes per function, and every
+// shape below repeats a whole `create…` call, so the shapes are kept few and
+// the requests tight.
 
 const SYNTHETICS_ROUTER: `0x${string}` =
   "0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6"; // pulls approved tokens
@@ -28,10 +32,6 @@ const WITHDRAWAL_VAULT: `0x${string}` =
 const GLV_VAULT: `0x${string}` = "0x393053B58f9678C9c28c2cE941fF6cac49C3F8f9";
 
 const ZERO: `0x${string}` = "0x0000000000000000000000000000000000000000";
-// The UI fee receiver the GMX app sets. Nobody holds its key, so nobody can
-// give it a fee factor.
-const GMX_UI_FEE_RECEIVER: `0x${string}` =
-  "0xff00000000000000000000000000000000000001";
 
 type Pool = {
   market: `0x${string}`;
@@ -64,23 +64,20 @@ const oneOf = <T>(values: readonly T[]) =>
 
 const call = c.calldataMatches;
 
-// Swap paths route through GMX markets inside the request. Empty is what the
-// app sends; anything else stays within the pools we already allow.
-// (`c.every` is typed for mutable arrays, the allow kit's for readonly ones.)
-const swapPath = c.every(oneOf(POOLS.map((p) => p.market))) as any;
-
+// Liquidity goes in as the pool's own tokens, so requests never swap, and
+// no UI fee is paid.
 const requestAddresses = {
   receiver: c.avatar,
   callbackContract: ZERO,
-  uiFeeReceiver: oneOf([ZERO, GMX_UI_FEE_RECEIVER]),
-  longTokenSwapPath: swapPath,
-  shortTokenSwapPath: swapPath,
+  uiFeeReceiver: ZERO,
+  longTokenSwapPath: [],
+  shortTokenSwapPath: [],
 };
 
 /**
  * The deposit shapes for one pool: the WETH execution fee, then either or both
- * of the pool's tokens. A WETH pool's long side may also ride along with the
- * fee in a single transfer; GMX takes the fee off the WETH it received.
+ * of the pool's tokens. A WETH pool's long side rides along with the fee in a
+ * single transfer instead; GMX takes the fee off the WETH it received.
  */
 const depositShapes = (
   router: typeof exchange | typeof glvRouter,
@@ -90,12 +87,15 @@ const depositShapes = (
 ) => {
   const send = (token: `0x${string}`) => call(router.sendTokens(token, vault));
   const fee = send(WETH);
+  const longIsFee = pool.long === WETH;
+  const single = longIsFee
+    ? send(pool.short)
+    : oneOf([send(pool.long), send(pool.short)]);
   const shapes = [
-    c.matches([fee, send(pool.long), create]),
-    c.matches([fee, send(pool.short), create]),
+    c.matches([fee, single, create]),
     c.matches([fee, send(pool.long), send(pool.short), create]),
   ];
-  if (pool.long === WETH) shapes.push(c.matches([fee, create]));
+  if (longIsFee) shapes.push(c.matches([fee, create]));
   return shapes;
 };
 

@@ -10,6 +10,7 @@ const arb = constellation({
 // personal Safe in Zodiac (re-run `bun pull-org` afterwards).
 const CURATORS = {
   jan_felix: arb.user["Jan-Felix Schwarz"],
+  johannes: arb.user["Johannes Moormann"],
 };
 
 // One Safe per client, each with its own Roles mod carrying the curator
