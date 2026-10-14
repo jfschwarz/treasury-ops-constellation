@@ -119,9 +119,11 @@ vault is 2-of-2: one curator plus the client. Open points:
 
 - The clients' real signer addresses (placeholders for now, see
   [Current state](#current-state)).
-- Jan is the curator signer on both vaults. Johannes can't sign yet (see
-  below). Should it be any one curator, so 2-of-3 or more with the client
-  required, rather than one named person?
+- Jan is the curator signer on both vaults, and Johannes can't sign yet (see
+  below). Should any one curator be able to co-sign instead of one named
+  person? A plain 2-of-3 with two curators wouldn't do it: the two curators
+  could then act without the client. It would take a 2-of-2 between the client
+  and a curator Safe (itself 1-of-n over the curators).
 - Does the client need to co-sign every owner action, or should our side be
   able to recover the vault (for example add a replacement Roles mod) without
   them?
