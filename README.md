@@ -67,6 +67,10 @@ them, try a small deposit and withdrawal. Also:
 - Which pools do we want? GMX's XAUT and GOLD markets are excluded because
   they're synthetic and backed by ETH/BTC/USDC, so LPing them gives no gold
   exposure.
+- The Roles mod takes at most 256 condition nodes per function, and the two
+  `multicall` conditions are at 194 (GM) and 226 (GLV). To make room, requests
+  can't swap or pay a UI fee. Adding a pool or GLV likely means splitting it
+  off or dropping one.
 
 **Gold.** XAUt0 was picked over PAXG because it has far more supply on
 Arbitrum (about 130.7 vs 15.7 tokens). Neither Aave nor Fluid lists gold on
@@ -90,8 +94,9 @@ guardrail.
 **Vault ownership.** Owners can do anything, including withdrawing. Who owns a
 production vault (the client, our signers, or both), and at what threshold?
 
-**Curators.** Jan is the only curator so far. Julia joins once she has a
-personal Safe in Zodiac (then run `bun pull-org`). How do we assign dedicated
+**Curators.** Jan and Johannes are the curators so far. Johannes's personal
+Safe isn't activated yet, so he can't act until it is. Julia joins once she
+has a personal Safe in Zodiac (then run `bun pull-org`). How do we assign dedicated
 specialists to future clients?
 
 ---
