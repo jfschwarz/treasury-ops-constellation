@@ -30,10 +30,10 @@ const client1Vault = arb.safe["Client 1 Vault"]({
   modules: [arb.roles["Client 1 Roles"]],
 });
 
-// Bound to the mod already on chain: it was deployed while the vault did not
-// exist yet, so its address no longer follows from the nonce.
+// Bound to the mod on chain. An earlier deployment left a second, unused mod
+// (0xc1e5…59eb) behind, so the address is spelled out rather than predicted.
 const client1Roles = arb.roles["Client 1 Roles"]({
-  address: "0xc1e547a5a725d14cb9ada0bbfb2596f69ae659eb",
+  address: "0x6b181236d70ad7d4e9104d9a0f88dea06defcd4b",
   target: client1Vault,
   owner: client1Vault,
   avatar: client1Vault,
