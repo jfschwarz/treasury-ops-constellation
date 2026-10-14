@@ -3,17 +3,12 @@ import { defineConfig } from "@zodiaceco/sdk/cli/config";
 export default defineConfig({
   contracts: {
     arb1: {
-      weth: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
-    },
-    eth: {
-      weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-      uniswap: {
-        positions_nft: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+      usdc: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      morpho: {
+        // What the Morpho app deposits and withdraws through.
+        vault_bundles_v1: "0x5afab0b2414e30c92a708234ea1b383ce6317ed5",
+        bitget_steakhouse_usdc: "0xbeeff1D5dE8F79ff37a151681100B039661da518",
       },
-    },
-    megaeth: {
-      usdm: "0xfafddbb3fc7688494971a79cc65dca3ef82079e7",
-      CompositeExchange: "0x5e3Ae52EbA0F9740364Bd5dd39738e1336086A8b",
     },
   },
 });

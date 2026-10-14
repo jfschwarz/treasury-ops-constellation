@@ -1,6 +1,120 @@
-# Zodiac Constellation Template
+# Treasury Ops Constellation
 
-A starter project for managing your organisation's onchain accounts, roles, and permissions as code.
+DeFi treasury operations on behalf of our investors: one Safe vault per client on
+Arbitrum, run by curators who can swap, lend, provide liquidity and rebalance,
+but never move funds into or out of a vault.
+
+This is an initial test setup and a basis for discussion and for refining the
+policy together. See [Open questions](#open-questions).
+
+## What it sets up
+
+On Arbitrum One (`constellation/index.ts`), per client:
+
+- **Client N Vault**: a Safe holding the client's funds. Owned 2-of-3 by a
+  curator and two signers of the client's. Our side can never move funds or
+  change the setup alone; the client can, with both of its signers.
+- **Client N Roles**: a Roles mod on the vault. It holds the curator policy and
+  is owned by the vault itself, so only the vault's owners can change it.
+
+There are two clients, both run by the whole curator team. The **Treasury
+Curator policy** (`constellation/roles/curator/`) is the same on every vault,
+with the curators set per vault. A vault can be run by the whole team with
+equal privileges, or by a dedicated specialist. To add a client, copy a client
+block with a new label and nonce.
+
+Assets: ETH, WETH, USDC (native), WBTC and XAUt0 (`constellation/tokens.ts`).
+
+## Who's who in this test setup
+
+Jan and Johannes from Zodiac stand in as curators, and Jan also as the
+curator-side vault owner. The client signers are placeholder addresses that
+nobody holds a key for.
+
+Next, we invite your curators to the demo organisation in Zodiac and make them
+curators, so they can play through executing transactions themselves. For that
+we need each curator's **wallet address and email**.
+
+## What curators can do
+
+Every receiver is pinned to the vault, so funds can only move between the
+vault's own positions.
+
+| Protocol   | Allowed                                                      |
+| ---------- | ------------------------------------------------------------ |
+| CoW Swap   | Swap between all treasury assets                             |
+| WETH       | Wrap and unwrap ETH                                          |
+| Aave v3    | Supply ETH, WETH, USDC, WBTC                                 |
+| Morpho     | Deposit into and withdraw from Bitget x Steakhouse USDC      |
+| Fluid      | Supply ETH, WETH, USDC                                       |
+| Uniswap v3 | Provide WETH/USDC/WBTC liquidity in the 0.05% and 0.3% pools |
+
+The permissions are in `constellation/roles/curator/permissions.ts`.
+
+## Open questions
+
+**GMX.** GMX v2 liquidity (GM pools and GLV vaults) isn't in this first
+iteration. Scoping it tightly enough takes a bit more time, and it will follow
+in the next one.
+
+**Pendle.** Pendle's only active markets on Arbitrum are USDai and sUSDai, none
+of which match our assets, so Pendle is left out. Pendle markets also expire,
+so their permissions would need replacing every epoch. Options:
+
+- Skip Pendle for now (current state).
+- Accept USDai / sUSDai exposure on Arbitrum.
+- Run Pendle positions on Ethereum, which would mean a second vault per client
+  on another chain.
+
+**Gold.** XAUt0 was picked over PAXG because it has far more supply on
+Arbitrum (about 130.7 vs 15.7 tokens). Neither Aave nor Fluid lists gold on
+Arbitrum, so gold can only be swapped, not lent. Is that enough?
+
+**Morpho.** For now only Bitget x Steakhouse USDC. Curators can use it both
+directly and through the Morpho app. Do we want more vaults?
+
+**Borrowing.** Curators can supply but not borrow. Borrowing on Aave and Morpho
+can be added if we want leverage or looping strategies.
+
+**Uniswap.** Curators can provide liquidity on Uniswap, but not swap there
+directly. Swaps go through CoW, which routes through Uniswap liquidity anyway.
+Is providing liquidity on Uniswap wanted at all, given the active management it
+needs?
+
+**Spending limits.** Nothing caps how much curators can move within a vault per
+day or week. Per-period limits on swap volume, for example, would bound what a
+compromised or mistaken curator account could do. Do we want them, and at what
+levels?
+
+**Vault ownership.** Owners can do anything, including withdrawing, so each
+vault is 2-of-3: one curator plus two client signers. Open points:
+
+- The clients' real signer addresses.
+- The client can act without us (both of its signers), including moving funds
+  out or removing the curator policy. Is that intended, since it's the client's
+  money, or should every owner action need a curator?
+- One named curator holds the curator seat. Should any one curator be able to
+  co-sign instead? Adding more curators as owners at the same threshold
+  wouldn't do it: two curators could then act without the client. The curator
+  seat would have to be a curator Safe (itself 1-of-n over the curators).
+
+**Specialists.** How do we assign dedicated specialists to future clients?
+
+## Deployment status
+
+- **Client 1** is live: vault `0x22a2…6839` with its Roles mod `0x6b18…cd4b`.
+  On chain it's still owned 1-of-1 by Jan; the 2-of-3 ownership and Client 2
+  aren't deployed yet.
+- **Don't push the 2-of-3 ownership until the client signers are real.** With
+  both client signers being placeholders, Jan alone can't reach 2 of 3, so the
+  vault could never change its owners or setup again.
+- Before relying on the Morpho permissions, test a small deposit and
+  withdrawal.
+
+---
+
+The rest of this README is the constellation template's guide to working with
+this repository.
 
 ## What's a Zodiac constellation?
 
@@ -83,10 +197,7 @@ export const tweaked = eth.safe["GG Treasury"]({ threshold: 4 });
 export const backendSafe = eth.safe["Backend Safe"]({
   nonce: 0n,
   threshold: 2,
-  owners: [
-    "0xcAF075b4102d96CdF9Bc5A2cEDb170a8b69697E8",
-    eth.user["alice"],
-  ],
+  owners: ["0xcAF075b4102d96CdF9Bc5A2cEDb170a8b69697E8", eth.user["alice"]],
   modules: [eth.roles["Backend Operator"]],
 });
 ```
