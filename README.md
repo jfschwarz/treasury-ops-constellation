@@ -27,15 +27,14 @@ Assets: ETH, WETH, USDC (native), WBTC and XAUt0 (`constellation/tokens.ts`).
 Every receiver is pinned to the vault, so funds can only move between the
 vault's own positions.
 
-| Protocol   | Allowed                                                                     | Built with                                                 |
-| ---------- | --------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| CoW Swap   | Swap between all treasury assets                                            | SDK `swap`                                                 |
-| WETH       | Wrap and unwrap ETH                                                         | SDK `swap` (an ETH↔WETH swap compiles to deposit/withdraw) |
-| Aave v3    | Supply ETH, WETH, USDC, WBTC                                                | DeFi Kit                                                   |
-| Morpho     | Deposit into Steakhouse High Yield USDC and Gauntlet USDC Core              | DeFi Kit                                                   |
-| Fluid      | Supply ETH, WETH, USDC                                                      | DeFi Kit                                                   |
-| Uniswap v3 | Provide WETH/USDC/WBTC liquidity in the 0.05% and 0.3% pools                | DeFi Kit                                                   |
-| GMX v2     | Deposit into and withdraw from GM ETH/USD and BTC/USD and the matching GLVs | Hand-written (`constellation/roles/curator/gmx.ts`)        |
+| Protocol   | Allowed                                                        | Built with                                                 |
+| ---------- | -------------------------------------------------------------- | ---------------------------------------------------------- |
+| CoW Swap   | Swap between all treasury assets                               | SDK `swap`                                                 |
+| WETH       | Wrap and unwrap ETH                                            | SDK `swap` (an ETH↔WETH swap compiles to deposit/withdraw) |
+| Aave v3    | Supply ETH, WETH, USDC, WBTC                                   | DeFi Kit                                                   |
+| Morpho     | Deposit into Steakhouse High Yield USDC and Gauntlet USDC Core | DeFi Kit                                                   |
+| Fluid      | Supply ETH, WETH, USDC                                         | DeFi Kit                                                   |
+| Uniswap v3 | Provide WETH/USDC/WBTC liquidity in the 0.05% and 0.3% pools   | DeFi Kit                                                   |
 
 `constellation/defikit.ts` types the SDK's `defikit` entries against DeFi Kit's
 Arbitrum kit, so Arbitrum-only tokens, vaults and parameters type-check.
@@ -52,25 +51,24 @@ specific markets, and those expire and need replacing every epoch. Options:
 - Run Pendle positions on Ethereum, which would mean a second vault per client
   on another chain.
 
-**GMX.** DeFi Kit has no GMX preset, so `gmx.ts` is written by hand. It allows
-only whole `multicall`s (send tokens, then create the request), because GMX
-credits a request with whatever tokens sit in its vault contract. Unlike the
-GMX app, the execution fee is paid in WETH rather than ETH: ETH sent along
-with a call could be left behind in the router for anyone to take. So curators
-wrap ETH first, and the GMX app's own transactions won't pass. They have to
-be built in this shape, by Pilot or a script. The permissions pass the Roles
-SDK's integrity checks but haven't been fork-tested yet. Before relying on
-them, try a small deposit and withdrawal. Also:
+**GMX.** GMX v2 liquidity (GM pools and GLV vaults) is dropped for now
+because the Roles mod can't scope it safely. GMX deposits are a `multicall` of
+`sendTokens` calls followed by `createDeposit`, and only the whole bundle is
+safe: GMX credits a request with whatever tokens sit in its vault contract, so
+a lone `sendTokens` could be claimed by someone else's request. Roles 2.1.1
+decodes every element of an array by the first element's layout and rejects
+arrays whose elements differ (`UnsuitableChildTypeTree`), so a typed condition
+on the bundle fails on deploy. The SDK's integrity checks don't catch this.
+Options:
 
-- GMX redeploys its routers on upgrades. When that happens, update
-  `zodiac.config.ts` and redeploy the policy.
-- Which pools do we want? GMX's XAUT and GOLD markets are excluded because
-  they're synthetic and backed by ETH/BTC/USDC, so LPing them gives no gold
-  exposure.
-- The Roles mod takes at most 256 condition nodes per function, and the two
-  `multicall` conditions are at 194 (GM) and 226 (GLV). To make room, requests
-  can't swap or pay a UI fee. Adding a pool or GLV likely means splitting it
-  off or dropping one.
+- Check each element as raw bytes with `bitmask` conditions (selector, token,
+  vault, receiver, market, empty swap paths, pinned ABI offsets). Workable, but
+  harder to audit than typed conditions.
+- Wait for a Roles version that decodes mixed arrays.
+- Pilot's GMX translation doesn't help: it unfolds the `multicall` into
+  standalone router calls, which only pass if a lone `sendTokens` is allowed.
+- The hand-written version is in git history (`constellation/roles/curator/gmx.ts`
+  before it was removed).
 
 **Gold.** XAUt0 was picked over PAXG because it has far more supply on
 Arbitrum (about 130.7 vs 15.7 tokens). Neither Aave nor Fluid lists gold on
